@@ -1,39 +1,38 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from .services.calendar_service import CalendarService # type: ignore
-from .config import settings
+import logging
+from src.utils.logging_config import setup_logging
+from src.services.learn_service import LearnService
+from src.services.calendar_service import CalendarService
+from src.services.quiz_service import QuizService
+from src.services.submission_service import SubmissionService
+from src.services.notification_service import NotificationService
 
-app = FastAPI(
-    title=settings.PROJECT_NAME,
-    openapi_url=f"{settings.API_V1_PREFIX}/openapi.json"
-)
+def main():
+    """Main entry point for the application."""
+    setup_logging()  # Set up logging configuration
+    logging.info("Application started.")
 
-# Add CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+    # Initialize services
+    learn_service = LearnService()
+    calendar_service = CalendarService()
+    quiz_service = QuizService()
+    submission_service = SubmissionService()
+    notification_service = NotificationService()
 
-# Initialize services
-calendar_service = CalendarService(settings.GOOGLE_CALENDAR_CREDENTIALS_PATH)
+    # Example usage of services
+    try:
+        learn_service.initialize()
+        courses = learn_service.fetch_courses()
+        logging.info(f"Fetched courses: {courses}")
 
-@app.get("/api/events")
-async def get_events():
-    """
-    Retrieve all upcoming events from the calendar
-    """
-    return await calendar_service.get_upcoming_events()
+        # Generate a mock test for the first course
+        if courses:
+            quiz = quiz_service.generate_mock_test(courses[0])
+            logging.info(f"Generated quiz: {quiz}")
 
-@app.get("/api/health")
-async def health_check():
-    """
-    Check if the API is running
-    """
-    return {"status": "healthy"}
+        # Additional logic for calendar, submissions, and notifications can be added here
+
+    except Exception as e:
+        logging.error(f"An error occurred: {e}")
 
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    main()
